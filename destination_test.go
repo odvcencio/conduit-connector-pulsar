@@ -1,16 +1,16 @@
-package connectorname_test
+package pulsar_test
 
 import (
 	"context"
 	"testing"
 
-	connectorname "github.com/conduitio/conduit-connector-connectorname"
+	pulsar "github.com/odvcencio/conduit-connector-pulsar"
 	"github.com/matryer/is"
 )
 
 func TestTeardown_NoOpen(t *testing.T) {
 	is := is.New(t)
-	con := connectorname.NewDestination()
+	con := pulsar.NewDestination()
 	err := con.Teardown(context.Background())
 	is.NoErr(err)
 }

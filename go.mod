@@ -1,4 +1,4 @@
-module github.com/conduitio/conduit-connector-connectorname
+module github.com/odvcencio/conduit-connector-pulsar
 
 go 1.20
 
