@@ -42,7 +42,7 @@ func TestDestinationIntegrationWrite(t *testing.T) {
 	pulsarMessages := make([]*pulsar.ProducerMessage, amountOfRecords)
 	sdkRecords := make([]sdk.Record, amountOfRecords)
 
-	//generate a few records here
+	// generate a few records here
 	for i := 0; i < amountOfRecords; i++ {
 		// make the pulsar messages
 		pulsarMessages[i] = &pulsar.ProducerMessage{
@@ -65,7 +65,6 @@ func TestDestinationIntegrationWrite(t *testing.T) {
 
 	defer cClient.Close()
 
-	//var messages []*pulsar.ProducerMessage
 	consumer, err := cClient.Subscribe(pulsar.ConsumerOptions{
 		Topic:            cfg["topic"],
 		SubscriptionName: "test-sub",
