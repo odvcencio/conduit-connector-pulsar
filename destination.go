@@ -5,16 +5,19 @@ package pulsar
 import (
 	"context"
 	"fmt"
+	"strings"
 
-	p "github.com/apache/pulsar-client-go/pulsar"
+	"github.com/apache/pulsar-client-go/pulsar"
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"golang.org/x/sync/errgroup"
 )
 
 type Destination struct {
 	sdk.UnimplementedDestination
 
-	config DestinationConfig
-	client p.Client
+	config   DestinationConfig
+	client   pulsar.Client
+	producer pulsar.Producer
 }
 
 type DestinationConfig struct {
@@ -58,7 +61,21 @@ func (d *Destination) Open(ctx context.Context) error {
 	// Open is called after Configure to signal the plugin it can prepare to
 	// start writing records. If needed, the plugin should open connections in
 	// this function.
-	return nil
+	pulsarURL := fmt.Sprintf("pulsar://%s", strings.Join(d.config.Servers, ","))
+
+	var err error
+	d.client, err = pulsar.NewClient(pulsar.ClientOptions{
+		URL: pulsarURL,
+	})
+	if err != nil {
+		return err
+	}
+
+	d.producer, err = d.client.CreateProducer(pulsar.ProducerOptions{
+		Topic: d.config.Topic,
+	})
+
+	return err
 }
 
 func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
@@ -66,12 +83,35 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 	// caching. It should return the number of records written from r
 	// (0 <= n <= len(r)) and any error encountered that caused the write to
 	// stop early. Write must return a non-nil error if it returns n < len(r).
-	return 0, nil
+	errs, ctx := errgroup.WithContext(ctx)
+	var count int
+
+	for _, record := range records {
+		record := record // https://golang.org/doc/faq#closures_and_goroutines
+		errs.Go(func() error {
+			_, err := d.producer.Send(ctx, &pulsar.ProducerMessage{
+				Payload: record.Bytes(),
+			})
+			if err == nil {
+				count += 1
+			}
+
+			return err
+		})
+	}
+
+	return count, errs.Wait()
 }
 
 func (d *Destination) Teardown(ctx context.Context) error {
 	// Teardown signals to the plugin that all records were written and there
 	// will be no more calls to any other function. After Teardown returns, the
 	// plugin should be ready for a graceful shutdown.
+	if d.producer != nil {
+		d.producer.Close()
+	}
+
+	d.client.Close()
+
 	return nil
 }

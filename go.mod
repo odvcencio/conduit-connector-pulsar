@@ -8,6 +8,7 @@ require (
 	github.com/apache/pulsar-client-go v0.11.1
 	github.com/conduitio/conduit-connector-sdk v0.8.0
 	github.com/matryer/is v1.4.1
+	golang.org/x/sync v0.4.0
 )
 
 require (
