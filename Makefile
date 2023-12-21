@@ -20,3 +20,6 @@ generate:
 
 install-paramgen:
 	go install github.com/conduitio/conduit-connector-sdk/cmd/paramgen@latest
+
+make-test-topic:
+	docker exec broker bin/pulsar-admin topics create persistent://public/default/test-topic 

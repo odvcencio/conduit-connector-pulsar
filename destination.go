@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -83,24 +84,28 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 	// caching. It should return the number of records written from r
 	// (0 <= n <= len(r)) and any error encountered that caused the write to
 	// stop early. Write must return a non-nil error if it returns n < len(r).
-	errs, ctx := errgroup.WithContext(ctx)
-	var count int
+	g, ctx := errgroup.WithContext(ctx)
+	var count atomic.Uint64
 
 	for _, record := range records {
 		record := record // https://golang.org/doc/faq#closures_and_goroutines
-		errs.Go(func() error {
+		g.Go(func() error {
 			_, err := d.producer.Send(ctx, &pulsar.ProducerMessage{
 				Payload: record.Bytes(),
 			})
 			if err == nil {
-				count += 1
+				count.Add(1)
 			}
 
 			return err
 		})
 	}
 
-	return count, errs.Wait()
+	if err := g.Wait(); err != nil {
+		return int(count.Load()), err
+	}
+
+	return int(count.Load()), nil
 }
 
 func (d *Destination) Teardown(ctx context.Context) error {
@@ -111,7 +116,9 @@ func (d *Destination) Teardown(ctx context.Context) error {
 		d.producer.Close()
 	}
 
-	d.client.Close()
+	if d.client != nil {
+		d.client.Close()
+	}
 
 	return nil
 }

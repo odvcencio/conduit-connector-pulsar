@@ -2,8 +2,6 @@ module github.com/odvcencio/conduit-connector-pulsar
 
 go 1.21
 
-toolchain go1.21.0
-
 require (
 	github.com/apache/pulsar-client-go v0.11.1
 	github.com/conduitio/conduit-connector-sdk v0.8.0
