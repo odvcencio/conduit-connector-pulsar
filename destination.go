@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	p "github.com/apache/pulsar-client-go/pulsar"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
@@ -13,6 +14,7 @@ type Destination struct {
 	sdk.UnimplementedDestination
 
 	config DestinationConfig
+	client p.Client
 }
 
 type DestinationConfig struct {

@@ -12,8 +12,7 @@ import (
 type Source struct {
 	sdk.UnimplementedSource
 
-	config           SourceConfig
-	lastPositionRead sdk.Position //nolint:unused // this is just an example
+	config SourceConfig
 }
 
 type SourceConfig struct {

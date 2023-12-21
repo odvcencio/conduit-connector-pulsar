@@ -6,5 +6,6 @@ package pulsar
 type Config struct {
 	// GlobalConfigParam is named global_config_param_name and needs to be
 	// provided by the user.
-	GlobalConfigParam string `json:"global_config_param_name" validate:"required"`
+	GlobalConfigParam string   `json:"global_config_param_name" validate:"required"`
+	Servers           []string `json:"servers" validate:"required"`
 }
