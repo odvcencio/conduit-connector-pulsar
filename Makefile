@@ -1,4 +1,4 @@
-.PHONY: build test test-integration generate install-paramgen
+.PHONY: build test test-integration generate install-paramgen create-test-topic
 
 VERSION=$(shell git describe --tags --dirty --always)
 
@@ -11,6 +11,7 @@ test:
 test-integration:
 	# run required docker containers, execute integration tests, stop containers after tests
 	docker compose -f test/docker-compose.yml up -d
+	create-test-topic
 	go test $(GOTEST_FLAGS) -v -race ./...; ret=$$?; \
 		docker compose -f test/docker-compose.yml down; \
 		exit $$ret
@@ -21,5 +22,5 @@ generate:
 install-paramgen:
 	go install github.com/conduitio/conduit-connector-sdk/cmd/paramgen@latest
 
-make-test-topic:
+create-test-topic:
 	docker exec broker bin/pulsar-admin topics create persistent://public/default/test-topic 

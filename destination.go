@@ -91,7 +91,8 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 		record := record // https://golang.org/doc/faq#closures_and_goroutines
 		g.Go(func() error {
 			_, err := d.producer.Send(ctx, &pulsar.ProducerMessage{
-				Payload: record.Bytes(),
+				Payload: record.Payload.After.Bytes(),
+				Key:     string(record.Key.Bytes()),
 			})
 			if err == nil {
 				count.Add(1)

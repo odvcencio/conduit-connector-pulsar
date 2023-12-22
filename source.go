@@ -5,14 +5,18 @@ package pulsar
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/apache/pulsar-client-go/pulsar"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
 type Source struct {
 	sdk.UnimplementedSource
 
-	config SourceConfig
+	config   SourceConfig
+	client   pulsar.Client
+	consumer pulsar.Consumer
 }
 
 type SourceConfig struct {
@@ -58,6 +62,25 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	// last record that was successfully processed, Source should therefore
 	// start producing records after this position. The context passed to Open
 	// will be cancelled once the plugin receives a stop signal from Conduit.
+	pulsarURL := fmt.Sprintf("pulsar://%s", strings.Join(s.config.Servers, ","))
+
+	var err error
+	s.client, err = pulsar.NewClient(pulsar.ClientOptions{
+		URL: pulsarURL,
+	})
+	if err != nil {
+		return err
+	}
+
+	s.consumer, err = s.client.Subscribe(pulsar.ConsumerOptions{
+		Topic:            s.config.Topic,
+		SubscriptionName: "connector-consumer",
+		Type:             pulsar.Shared,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -76,7 +99,20 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	// After Read returns an error the function won't be called again (except if
 	// the error is ErrBackoffRetry, as mentioned above).
 	// Read can be called concurrently with Ack.
-	return sdk.Record{}, nil
+	msg, err := s.consumer.Receive(ctx)
+	if err != nil {
+		return sdk.Record{}, err
+	}
+
+	metadata := sdk.Metadata{"pulsar.topic": msg.Topic()}
+	metadata.SetCreatedAt(msg.EventTime())
+
+	return sdk.Util.Source.NewRecordCreate(
+		sdk.Position(msg.ID().Serialize()),
+		metadata,
+		sdk.RawData(msg.Key()),
+		sdk.RawData(msg.Payload()),
+	), nil
 }
 
 func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
@@ -86,12 +122,25 @@ func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
 	// outstanding acks that need to be delivered. When Teardown is called it is
 	// guaranteed there won't be any more calls to Ack.
 	// Ack can be called concurrently with Read.
-	return nil
+	msgID, err := pulsar.DeserializeMessageID(position)
+	if err != nil {
+		return err
+	}
+
+	return s.consumer.AckID(msgID)
 }
 
 func (s *Source) Teardown(ctx context.Context) error {
 	// Teardown signals to the plugin that there will be no more calls to any
 	// other function. After Teardown returns, the plugin should be ready for a
 	// graceful shutdown.
+	if s.client != nil {
+		s.client.Close()
+	}
+
+	if s.consumer != nil {
+		s.consumer.Close()
+	}
+
 	return nil
 }

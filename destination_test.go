@@ -7,7 +7,6 @@ import (
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/google/uuid"
 	"github.com/matryer/is"
 )
 
@@ -46,13 +45,15 @@ func TestDestinationIntegrationWrite(t *testing.T) {
 	for i := 0; i < amountOfRecords; i++ {
 		// make the pulsar messages
 		pulsarMessages[i] = &pulsar.ProducerMessage{
+			Key:     fmt.Sprintf("key-%d", i),
 			Payload: []byte(fmt.Sprintf("test-payload-%d", i)),
 		}
+
 		// make the sdk records
 		sdkRecords[i] = sdk.Util.Source.NewRecordCreate(
-			[]byte(uuid.NewString()),
 			nil,
 			nil,
+			sdk.RawData(pulsarMessages[i].Key),
 			sdk.RawData(pulsarMessages[i].Payload),
 		)
 	}
