@@ -10,7 +10,7 @@ import (
 	"github.com/matryer/is"
 )
 
-var cfg = map[string]string{"servers": "localhost:6650",
+var cfg = map[string]string{"servers": "localhost:6651",
 	"topic": "persistent://public/default/test-topic"}
 
 func TestTeardown_NoOpen(t *testing.T) {
@@ -60,7 +60,7 @@ func TestDestinationIntegrationWrite(t *testing.T) {
 
 	// create a consumer to verify messages were produced to the destination
 	cClient, err := pulsar.NewClient(pulsar.ClientOptions{
-		URL: "pulsar://" + cfg["servers"],
+		URL: "pulsar+ssl://" + cfg["servers"],
 	})
 	is.NoErr(err)
 

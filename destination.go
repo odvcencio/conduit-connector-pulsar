@@ -55,6 +55,18 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
+
+	pulsarURL := fmt.Sprintf("pulsar+ssl://%s", strings.Join(d.config.Servers, ","))
+
+	d.client, err = pulsar.NewClient(pulsar.ClientOptions{
+		URL:                        pulsarURL,
+		TLSAllowInsecureConnection: d.config.AllowInsecure,
+		TLSTrustCertsFilePath:      d.config.TLSTrustCertsFilePath,
+		Authentication:             pulsar.NewAuthenticationTLS(d.config.TLSCertPath, d.config.TLSPrivateKeyPath),
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -62,16 +74,7 @@ func (d *Destination) Open(ctx context.Context) error {
 	// Open is called after Configure to signal the plugin it can prepare to
 	// start writing records. If needed, the plugin should open connections in
 	// this function.
-	pulsarURL := fmt.Sprintf("pulsar://%s", strings.Join(d.config.Servers, ","))
-
 	var err error
-	d.client, err = pulsar.NewClient(pulsar.ClientOptions{
-		URL: pulsarURL,
-	})
-	if err != nil {
-		return err
-	}
-
 	d.producer, err = d.client.CreateProducer(pulsar.ProducerOptions{
 		Topic: d.config.Topic,
 	})

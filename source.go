@@ -52,6 +52,19 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
+
+	pulsarURL := fmt.Sprintf("pulsar+ssl://%s", strings.Join(s.config.Servers, ","))
+
+	s.client, err = pulsar.NewClient(pulsar.ClientOptions{
+		URL:                        pulsarURL,
+		TLSAllowInsecureConnection: s.config.AllowInsecure,
+		TLSTrustCertsFilePath:      s.config.TLSTrustCertsFilePath,
+		Authentication:             pulsar.NewAuthenticationTLS(s.config.TLSCertPath, s.config.TLSPrivateKeyPath),
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -62,16 +75,7 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	// last record that was successfully processed, Source should therefore
 	// start producing records after this position. The context passed to Open
 	// will be cancelled once the plugin receives a stop signal from Conduit.
-	pulsarURL := fmt.Sprintf("pulsar://%s", strings.Join(s.config.Servers, ","))
-
 	var err error
-	s.client, err = pulsar.NewClient(pulsar.ClientOptions{
-		URL: pulsarURL,
-	})
-	if err != nil {
-		return err
-	}
-
 	s.consumer, err = s.client.Subscribe(pulsar.ConsumerOptions{
 		Topic:            s.config.Topic,
 		SubscriptionName: "connector-consumer",

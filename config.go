@@ -8,4 +8,13 @@ type Config struct {
 	Servers []string `json:"servers" validate:"required"`
 	// Topic is the Pulsar topic
 	Topic string `json:"topic" validate:"required"`
+
+	// TLSTrustCertsFilePath is the path to the CA cert file
+	TLSTrustCertsFilePath string `json:"trustCertsFilePath"`
+	// TLSCertPath is the path to the client cert file
+	TLSCertPath string `json:"certPath"`
+	// TLSPrivateKeyPath is the path to the private key file
+	TLSPrivateKeyPath string `json:"privateKeyPath"`
+	// AllowInsecure decides if the client allows untrusted cert from broker or not
+	AllowInsecure bool `json:"allowInsecure"`
 }
